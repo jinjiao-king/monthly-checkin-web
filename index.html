@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日计划打卡表</title>
+<style>
+  :root {
+    --primary: #4b6ef7;
+    --primary-dark: #3a58d6;
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --line: #dde3ef;
+    --text: #2c2f3a;
+    --muted: #8a93a6;
+    --weekend: #fff3f3;
+    --today: #e8ebff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px 16px 60px;
+  }
+
+  .page { max-width: 1000px; margin: 0 auto; }
+
+  /* ---- toolbar ---- */
+  .toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 12px; background: var(--card); border-radius: 14px;
+    padding: 12px 16px; box-shadow: 0 2px 12px rgba(30, 42, 80, .06);
+    margin-bottom: 16px;
+  }
+
+  .month-bar { display: flex; align-items: center; gap: 8px; }
+  .month-bar h1 {
+    font-size: 22px; font-weight: 700; min-width: 128px; text-align: center;
+    letter-spacing: 1px;
+  }
+  .nav-btn {
+    width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px;
+    background: #fff; color: var(--text); font-size: 16px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .nav-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .btn {
+    border: 1px solid var(--line); background: #fff; color: var(--text);
+    padding: 7px 14px; border-radius: 9px; font-size: 14px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn.primary:hover { background: var(--primary-dark); }
+  .btn.danger:hover { border-color: #e5484d; color: #e5484d; }
+
+  .progress { font-size: 13px; color: var(--muted); }
+
+  /* ---- table ---- */
+  .card {
+    background: var(--card); border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(30, 42, 80, .06); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    background: var(--primary); color: #fff; font-size: 14px; font-weight: 600;
+    padding: 10px 6px; white-space: nowrap;
+  }
+
+  tbody td { border-bottom: 1px solid var(--line); padding: 0; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.weekend { background: var(--weekend); }
+  tbody tr.today td { background: var(--today); box-shadow: inset 0 0 0 10px var(--card); }
+
+  .col-date { width: 68px; text-align: center; font-size: 15px; font-weight: 600; }
+  .col-wd { width: 52px; text-align: center; font-size: 12px; color: var(--muted); }
+
+  .col-check { width: 54px; text-align: center; }
+  .col-plan { width: 1%; }
+
+  input[type="checkbox"].check {
+    width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; vertical-align: middle;
+  }
+
+  input.plan {
+    width: 100%; border: none; outline: none; font-size: 14px; font-family: inherit;
+    padding: 10px 12px; background: transparent; color: var(--text);
+  }
+  input.plan::placeholder { color: #c4c9d6; }
+  input.plan:focus { background: #f2f5ff; }
+
+  /* ---- goals ---- */
+  .goals {
+    background: var(--card); border-radius: 14px; padding: 18px 20px;
+    box-shadow: 0 2px 12px rgba(30, 42, 80, .06); margin-top: 16px;
+  }
+  .goals h2 {
+    font-size: 16px; font-weight: 700; margin-bottom: 12px;
+    border-left: 4px solid var(--primary); padding-left: 10px;
+  }
+  .goal-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .goal-row:last-child { margin-bottom: 0; }
+  .goal-label { font-size: 14px; font-weight: 600; color: var(--primary); min-width: 34px; }
+  .goal-input {
+    flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+    font-size: 14px; font-family: inherit; color: var(--text); background: #fafbff;
+  }
+  .goal-input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+  footer { margin-top: 14px; font-size: 12px; color: var(--muted); text-align: center; }
+
+  /* ---- print ---- */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .toolbar { display: none; }
+    footer { display: none; }
+
+    .card, .goals { box-shadow: none; border-radius: 0; }
+    table { table-layout: fixed; }
+
+    thead th { background: #333; color: #fff; border-bottom: 2px solid #000; font-size: 12px; }
+    tbody td { border-bottom: 1px solid #bbb; font-size: 12px; }
+    tbody tr.weekend { background: #f3f3f3; }
+    tbody tr.today td { background: #fff; box-shadow: none; }
+
+    .col-date { width: 8%; }
+    .col-wd { width: 8%; }
+    .col-check { width: 11%; }
+    .col-plan { width: 21%; }
+
+    input.plan { font-size: 12px; padding: 4px; }
+    input[type="checkbox"].check { width: 14px; height: 14px; }
+    .goal-input { font-size: 12px; padding: 4px; }
+
+    @page { size: A4 portrait; margin: 9mm 8mm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="toolbar">
+    <div class="month-bar">
+      <button class="nav-btn" id="prevMonth" title="上个月">&#9664;</button>
+      <h1 id="monthTitle">2026年8月</h1>
+      <button class="nav-btn" id="nextMonth" title="下个月">&#9654;</button>
+      <button class="btn" id="todayBtn">今天</button>
+    </div>
+    <div class="actions">
+      <span class="progress" id="progress"></span>
+      <button class="btn danger" id="clearBtn">清空本月</button>
+      <button class="btn primary" id="printBtn">&#128424; 打印</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-date">日期</th>
+          <th class="col-wd">星期</th>
+          <th class="col-check">学习</th>
+          <th class="col-plan">学习计划</th>
+          <th class="col-check">锻炼</th>
+          <th class="col-plan">复盘计划</th>
+          <th class="col-check">复盘</th>
+          <th class="col-plan">锻炼计划</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="goals">
+    <h2>月度目标</h2>
+    <div class="goal-row"><span class="goal-label">目标1</span><input class="goal-input" id="goal0" placeholder="本月最重要的目标…"></div>
+    <div class="goal-row"><span class="goal-label">目标2</span><input class="goal-input" id="goal1" placeholder="本月最重要的目标…"></div>
+    <div class="goal-row"><span class="goal-label">目标3</span><input class="goal-input" id="goal2" placeholder="本月最重要的目标…"></div>
+  </div>
+
+  <footer>数据自动保存在本机浏览器中，各月数据相互独立</footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+
+  function emptyData() {
+    return { daily: {}, goals: ['', '', ''] };
+  }
+  function keyOf(y, m) {
+    return 'dcck:' + y + '-' + String(m).padStart(2, '0');
+  }
+  function load(y, m) {
+    try {
+      var raw = localStorage.getItem(keyOf(y, m));
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        return {
+          daily: parsed.daily || {},
+          goals: parsed.goals || ['', '', '']
+        };
+      }
+    } catch (e) {}
+    return emptyData();
+  }
+  function save() {
+    try { localStorage.setItem(keyOf(Y, M), JSON.stringify(data)); } catch (e) {}
+  }
+
+  var tbody = document.getElementById('tbody');
+  var monthTitle = document.getElementById('monthTitle');
+  var progressEl = document.getElementById('progress');
+  var Y, M, data;
+
+  function todayRef() {
+    var now = new Date();
+    return { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
+  }
+
+  function updateProgress() {
+    var days = new Date(Y, M, 0).getDate();
+    var on = 0;
+    for (var day = 1; day <= days; day++) {
+      var d = data.daily[day];
+      if (d && (d.learning || d.workout || d.reflect)) on++;
+    }
+    progressEl.textContent = '本月打卡 ' + on + ' / ' + days + ' 天';
+  }
+
+  function render() {
+    monthTitle.textContent = Y + '年' + M + '月';
+    var days = new Date(Y, M, 0).getDate();
+    var t = todayRef();
+    var isCur = t.y === Y && t.m === M;
+
+    tbody.innerHTML = '';
+    var frag = document.createDocumentFragment();
+
+    for (var day = 1; day <= days; day++) {
+      var d = data.daily[day] = data.daily[day] || {};
+      var dow = new Date(Y, M - 1, day).getDay();
+      var tr = document.createElement('tr');
+      if (dow === 0 || dow === 6) tr.classList.add('weekend');
+      if (isCur && t.d === day) tr.classList.add('today');
+
+      var dateTd = document.createElement('td');
+      dateTd.className = 'col-date';
+      dateTd.textContent = day + '号';
+      tr.appendChild(dateTd);
+
+      var wdTd = document.createElement('td');
+      wdTd.className = 'col-wd';
+      wdTd.textContent = '周' + WEEK[dow];
+      tr.appendChild(wdTd);
+
+      var checks = ['learning', 'workout', 'reflect'];
+      var plans = ['studyPlan', 'reviewPlan', 'exercisePlan'];
+      var planPlace = ['学习计划', '复盘计划', '锻炼计划'];
+
+      for (var i = 0; i < 3; i++) {
+        var ck = checks[i];
+        var checkTd = document.createElement('td');
+        checkTd.className = 'col-check';
+        var box = document.createElement('input');
+        box.type = 'checkbox';
+        box.className = 'check';
+        box.checked = !!d[ck];
+        box.setAttribute('aria-label', planPlace[i] + '已完成');
+        box.addEventListener('change', (function (dd, k, b) {
+          return function () {
+            if (b.checked) {
+              dd[k] = true;
+            } else {
+              delete dd[k];
+            }
+            save();
+            updateProgress();
+          };
+        })(d, ck, box));
+        checkTd.appendChild(box);
+        tr.appendChild(checkTd);
+
+        var pk = plans[i];
+        var planTd = document.createElement('td');
+        planTd.className = 'col-plan';
+        var pin = document.createElement('input');
+        pin.type = 'text';
+        pin.className = 'plan';
+        pin.placeholder = planPlace[i] + '…';
+        pin.value = d[pk] || '';
+        pin.setAttribute('autocomplete', 'off');
+        pin.addEventListener('input', (function (dd, pk, input) {
+          return function () {
+            dd[pk] = input.value;
+            save();
+          };
+        })(d, pk, pin));
+        planTd.appendChild(pin);
+        tr.appendChild(planTd);
+      }
+
+      frag.appendChild(tr);
+    }
+
+    tbody.appendChild(frag);
+    updateProgress();
+  }
+
+  function goto(y, m) {
+    Y = y; M = m;
+    data = load(y, m);
+    render();
+    for (var i = 0; i < 3; i++) {
+      document.getElementById('goal' + i).value = data.goals[i] || '';
+    }
+  }
+
+  document.getElementById('prevMonth').addEventListener('click', function () {
+    goto(M === 1 ? Y - 1 : Y, M === 1 ? 12 : M - 1);
+  });
+  document.getElementById('nextMonth').addEventListener('click', function () {
+    goto(M === 12 ? Y + 1 : Y, M === 12 ? 1 : M + 1);
+  });
+  document.getElementById('todayBtn').addEventListener('click', function () {
+    var t = todayRef();
+    goto(t.y, t.m);
+  });
+  document.getElementById('printBtn').addEventListener('click', function () {
+    window.print();
+  });
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    if (!confirm('确定清空 ' + Y + '年' + M + '月 的全部打卡记录和目标吗？')) return;
+    data = emptyData();
+    localStorage.removeItem(keyOf(Y, M));
+    render();
+    for (var i = 0; i < 3; i++) document.getElementById('goal' + i).value = '';
+  });
+
+  for (var i = 0; i < 3; i++) {
+    (function (idx) {
+      document.getElementById('goal' + idx).addEventListener('input', function (e) {
+        data.goals[idx] = e.target.value;
+        save();
+      });
+    })(i);
+  }
+
+  var now = todayRef();
+  goto(now.y, now.m);
+})();
+</script>
+</body>
+</html>
