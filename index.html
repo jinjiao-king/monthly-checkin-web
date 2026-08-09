@@ -202,10 +202,11 @@
   .login-sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 18px; }
   .login-form label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
   .login-form input {
-    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px;
-    font-size: 14px; font-family: inherit; color: var(--text);
+    width: 100%; border: none; border-bottom: 2px solid #aab4cc; border-radius: 0;
+    padding: 10px 2px; font-size: 15px; font-family: inherit; color: var(--text); background: #fff;
   }
-  .login-form input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .login-form input:focus { outline: none; border-bottom-color: var(--primary); }
+  .login-form input::-webkit-input-placeholder { color: var(--muted); }
   .login-msg { min-height: 18px; margin: 12px 0 6px; font-size: 13px; }
   .login-msg.ok { color: var(--green); }
   .login-msg.fail { color: var(--red); }
