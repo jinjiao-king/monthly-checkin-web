@@ -164,6 +164,30 @@
   }
   .modal-foot button:hover { border-color: var(--primary); color: var(--primary); }
 
+  .sync-status { font-size: 12px; color: var(--muted); }
+  .sync-status.ok { color: var(--green); }
+  .sync-status.fail { color: var(--red); }
+  .sync-body { padding: 16px 18px; }
+  .sync-body .hint { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+  .sync-body label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+  .sync-body input {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+    font-size: 14px; font-family: inherit; color: var(--text);
+  }
+  .sync-body input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .sync-actions button {
+    border: 1px solid var(--line); background: #fff; padding: 7px 12px; border-radius: 8px;
+    font-size: 13px; cursor: pointer;
+  }
+  .sync-actions button:hover { border-color: var(--primary); color: var(--primary); }
+  .sync-actions button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .sync-actions button.primary:hover { background: var(--primary-dark); }
+  .sync-actions button.danger:hover { border-color: var(--red); color: var(--red); }
+  .sync-msg { margin-top: 12px; font-size: 13px; min-height: 18px; }
+  .sync-msg.ok { color: var(--green); }
+  .sync-msg.fail { color: var(--red); }
+
   /* ---- print ---- */
   @media print {
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -204,7 +228,9 @@
     </div>
     <div class="actions">
       <span class="progress" id="progress"></span>
+      <span class="sync-status" id="syncStatus">云同步：未开启</span>
       <button class="btn danger" id="clearBtn">清空本月</button>
+      <button class="btn" id="syncBtn" title="设置 LeanCloud 云同步">&#9881; 云同步</button>
       <button class="btn primary" id="printBtn">&#128424; 打印</button>
     </div>
   </div>
@@ -231,7 +257,32 @@
     <div class="goal-row"><span class="goal-label">目标3</span><input class="goal-input" id="goal2" placeholder="本月最重要的目标…"></div>
   </div>
 
-  <footer>点击日期格子添加/管理当天任务，数据自动保存在本机浏览器中，各月独立存储</footer>
+  <footer>点击日期格子添加/管理当天任务；数据保存在本机浏览器，开启云同步后额外备份到 LeanCloud，各月独立存储</footer>
+</div>
+
+<div class="backdrop" id="syncBackdrop" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2>云同步设置（LeanCloud）</h2>
+      <button class="close-x" id="syncClose" title="关闭">&times;</button>
+    </div>
+    <div class="sync-body">
+      <p class="hint">开启后，所有月份的任务数据会自动同步到 LeanCloud 云存储，清除浏览器缓存、换浏览器或换设备都不会丢失。App ID / App Key 在 LeanCloud 控制台的应用里获取（客户端可见属正常）。</p>
+      <label>App ID</label>
+      <input id="syncAppId" spellcheck="false" autocomplete="off">
+      <label>App Key</label>
+      <input id="syncAppKey" type="password" spellcheck="false" autocomplete="off">
+      <label>服务端地址（可选，备填）</label>
+      <input id="syncServer" placeholder="如 https://xxxx.lnc.lcn.cloud" spellcheck="false" autocomplete="off">
+      <div class="sync-actions">
+        <button class="primary" id="syncSave">测试并保存</button>
+        <button id="syncNow">立即上传</button>
+        <button class="danger" id="syncOff">停用云同步</button>
+      </div>
+      <p class="sync-msg" id="syncMsg"></p>
+    </div>
+    <div class="modal-foot"><button id="syncClose2">关闭</button></div>
+  </div>
 </div>
 
 <div class="backdrop" id="backdrop" hidden>
@@ -250,6 +301,7 @@
   </div>
 </div>
 
+<script src="vendor/av-min.js"></script>
 <script>
 (function () {
   'use strict';
@@ -272,6 +324,107 @@
   var Y, M, data;
   var activeDay = null;
 
+  /* ---- cloud sync (LeanCloud) ---- */
+  var syncStatusEl = document.getElementById('syncStatus');
+  var syncBackdropEl = document.getElementById('syncBackdrop');
+  var syncAppIdEl = document.getElementById('syncAppId');
+  var syncAppKeyEl = document.getElementById('syncAppKey');
+  var syncServerEl = document.getElementById('syncServer');
+  var syncMsgEl = document.getElementById('syncMsg');
+
+  var SYNC_KEY = 'dcck_sync';
+  var syncCfg = loadSyncCfg();
+  var syncTimer = null;
+  var cloudObjId = null;
+
+  function loadSyncCfg() {
+    try {
+      var p = JSON.parse(localStorage.getItem(SYNC_KEY));
+      if (p && p.appId && p.appKey) return { appId: p.appId, appKey: p.appKey, server: p.server || '' };
+    } catch (e) {}
+    return { appId: '', appKey: '', server: '' };
+  }
+  function persistSyncCfg() {
+    try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch (e) {}
+  }
+  function avReady() { return !!(window.AV && window.AV.init); }
+  function avInit() {
+    var opt = { appId: syncCfg.appId, appKey: syncCfg.appKey };
+    if (syncCfg.server) opt.serverURLs = syncCfg.server;
+    window.AV.init(opt);
+  }
+  function setSyncStatus(cls, txt) {
+    syncStatusEl.textContent = txt;
+    syncStatusEl.className = 'sync-status' + (cls ? ' ' + cls : '');
+  }
+  function setSyncMsg(cls, txt) {
+    syncMsgEl.textContent = txt;
+    syncMsgEl.className = 'sync-msg' + (cls ? ' ' + cls : '');
+  }
+  function hhmm() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  function collectPayload() {
+    var prefix = 'dcck2:';
+    var months = {};
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(prefix) === 0) {
+        try { months[k.slice(prefix.length)] = JSON.parse(localStorage.getItem(k)); } catch (e) {}
+      }
+    }
+    return { at: new Date().toISOString(), months: months };
+  }
+  function mergePayload(p) {
+    if (!p || !p.months) return;
+    for (var k in p.months) {
+      if (Object.prototype.hasOwnProperty.call(p.months, k)) {
+        try { localStorage.setItem('dcck2:' + k, JSON.stringify(p.months[k])); } catch (e) {}
+      }
+    }
+  }
+  function cloudPull(cb) {
+    var q = new window.AV.Query('CheckinStore');
+    q.equalTo('key', 'main');
+    q.first().then(function (obj) {
+      if (obj) {
+        cloudObjId = obj.id;
+        try {
+          var p = JSON.parse(obj.get('data') || 'null');
+          if (p && p.months) mergePayload(p);
+        } catch (e) {}
+      }
+      if (cb) cb();
+    }, function () { if (cb) cb(); });
+  }
+  function cloudPush(cb) {
+    if (!syncCfg.appId || !avReady()) { if (cb) cb(); return; }
+    var payload = collectPayload();
+    var Store = window.AV.Object.extend('CheckinStore');
+    var obj;
+    if (cloudObjId) {
+      obj = window.AV.Object.createWithoutData('CheckinStore', cloudObjId);
+    } else {
+      obj = new Store();
+      obj.set('key', 'main');
+    }
+    obj.set('data', JSON.stringify(payload));
+    obj.save().then(function (saved) {
+      cloudObjId = saved.id;
+      setSyncStatus('ok', '已同步 ' + hhmm());
+      if (cb) cb();
+    }, function () {
+      setSyncStatus('fail', '同步失败');
+      if (cb) cb();
+    });
+  }
+  function scheduleSync() {
+    if (!syncCfg.appId || !avReady()) return;
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () { cloudPush(); }, 1500);
+  }
+
   function emptyData() { return { days: {}, goals: ['', '', ''] }; }
   function keyOf(y, m) { return 'dcck2:' + y + '-' + String(m).padStart(2, '0'); }
 
@@ -290,6 +443,7 @@
   }
   function save() {
     try { localStorage.setItem(keyOf(Y, M), JSON.stringify(data)); } catch (e) {}
+    scheduleSync();
   }
 
   function todayRef() {
@@ -508,6 +662,7 @@
     if (!confirm('确定清空 ' + Y + '年' + M + '月 的全部任务和目标吗？')) return;
     data = emptyData();
     localStorage.removeItem(keyOf(Y, M));
+    scheduleSync();
     render();
     for (var i = 0; i < 3; i++) document.getElementById('goal' + i).value = '';
   });
@@ -521,8 +676,77 @@
     })(i);
   }
 
-  var now = todayRef();
-  goto(now.y, now.m);
+  /* ---- sync dialog ---- */
+  document.getElementById('syncBtn').addEventListener('click', function () {
+    syncAppIdEl.value = syncCfg.appId;
+    syncAppKeyEl.value = syncCfg.appKey;
+    syncServerEl.value = syncCfg.server || '';
+    setSyncMsg('', '');
+    syncBackdropEl.hidden = false;
+  });
+  function closeSyncModal() { syncBackdropEl.hidden = true; }
+  document.getElementById('syncClose').addEventListener('click', closeSyncModal);
+  document.getElementById('syncClose2').addEventListener('click', closeSyncModal);
+  syncBackdropEl.addEventListener('click', function (e) { if (e.target === syncBackdropEl) closeSyncModal(); });
+
+  document.getElementById('syncSave').addEventListener('click', function () {
+    var id = syncAppIdEl.value.trim();
+    var key = syncAppKeyEl.value.trim();
+    if (!id || !key) { setSyncMsg('fail', '请填写 App ID 和 App Key'); return; }
+    if (!avReady()) { setSyncMsg('fail', '云端 SDK 未加载，请刷新页面重试'); return; }
+    syncCfg.appId = id; syncCfg.appKey = key; syncCfg.server = syncServerEl.value.trim();
+    persistSyncCfg();
+    setSyncStatus('', '连接中…');
+    setSyncMsg('', '连接中…');
+    try { avInit(); } catch (e) { setSyncStatus('fail', '配置错误'); setSyncMsg('fail', '初始化失败：' + e.message); return; }
+    cloudPull(function () {
+      cloudPush(function () {
+        setSyncMsg('ok', '连接并同步成功，数据已上传到云端');
+      });
+    });
+  });
+
+  document.getElementById('syncNow').addEventListener('click', function () {
+    if (!syncCfg.appId) { setSyncMsg('fail', '尚未配置云端，请先在「测试并保存」'); return; }
+    if (!avReady()) { setSyncMsg('fail', '云端 SDK 未加载，请刷新页面重试'); return; }
+    try { avInit(); } catch (e) { setSyncMsg('fail', '初始化失败：' + e.message); return; }
+    setSyncMsg('', '上传中…');
+    cloudPush(function () { setSyncMsg('ok', '已上传所有月份数据到云端'); });
+  });
+
+  document.getElementById('syncOff').addEventListener('click', function () {
+    localStorage.removeItem(SYNC_KEY);
+    syncCfg = loadSyncCfg();
+    cloudObjId = null;
+    if (syncTimer) clearTimeout(syncTimer);
+    setSyncStatus('', '云同步：未开启');
+    setSyncMsg('fail', '已停用同步，之后数据仅保存在本机浏览器');
+  });
+
+  /* ---- startup: pull cloud first if configured ---- */
+  function bootUI() {
+    var now = todayRef();
+    goto(now.y, now.m);
+  }
+  if (syncCfg.appId) {
+    if (!avReady()) {
+      setSyncStatus('fail', '云SDK加载失败');
+      bootUI();
+    } else {
+      setSyncStatus('', '云同步中…');
+      try {
+        avInit();
+        cloudPull(function () {
+          cloudPush(bootUI);
+        });
+      } catch (e) {
+        setSyncStatus('fail', '配置错误');
+        bootUI();
+      }
+    }
+  } else {
+    bootUI();
+  }
 })();
 </script>
 </body>
