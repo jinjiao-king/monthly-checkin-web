@@ -1,42 +1,43 @@
 # 每日计划打卡表（网页版）
 
-一个纯静态的月度每日打卡日历网页。数据同时保存在浏览器本地（localStorage）并可实时同步到 **LeanCloud** 云端，按月独立存储、清缓存换设备也不丢。
+一个纯静态的月度每日打卡日历网页。打卡数据**绑定登录账号**，云端按账号独立存储（LeanCloud），换设备登录同一账号即可看到同一份数据。
 
 > 目录里 `vendor/av-min.js` 是 LeanCloud 浏览器端 SDK，已本地内置，不依赖外部 CDN。
 
 ## 功能
 
-- 日历视图：每月一张月历，周一~周日排布，点击任意日期格子即可添加当天任务
-- 每日任务列表：添加 / 勾选完成 / 删除
+- **登录 / 注册**：进入页面需登录；注册需回答资格问题（答案只有你自己知道），防止陌生人随意注册
+- **数据绑定用户**：打卡数据归登录账号所有，云端 ACL 仅本人可读写，未登录或他人账号看不到你的内容
+- 日历视图：每月一张月历，点击任意日期格子即可添加当天任务
+- 格子内**任务预览**：每行一个小勾选框（已完成为绿色勾）+ 任务文字，超长自动省略号缩略；任务过多时格子大小不变，超出部分隐藏并提示「＋N 条未显示」；打印时会完整列出所有任务
 - 完成状态一目了然：
   - 当天任务**全部完成** → 日期格子显示**绿色**
   - 当天**还有未完成任务** → 日期格子显示**淡红色**
   - 当天**没有任务** → 中性底色
-- 今天所在日期有蓝色描边高亮
-- 格子右上角显示「已完成数 / 任务总数」
+- 已完成任务与任务弹窗样式统一：勾选框绿色、文字加删除线
 - 底部「月度目标」三行，随月份独立保存
-- 一键打印，输出 A4 竖向月历（含每天任务清单、绿/红背景）
+- 一键打印，输出 A4 竖向月历（含每天任务清单）
 - 逐月切换、一键回到今天、「清空本月」重置当月数据
-- **云端同步**：改动自动上传 LeanCloud，打开页面自动拉取，多设备共享，清浏览器缓存不丢
+- **云端同步**：改动自动上传、打开自动拉取，多设备共享
 
-> 数据模型的权限：所有月份数据以 JSON 整体存储（对象 `CheckinStore`，字段 `data`）。
+## 部署（GitHub Pages + 自定义域名）
 
-## 启用云同步（LeanCloud）
+1. 代码推送到 GitHub 仓库（公开仓库才能免费托管 Pages）：
 
-本页面已内置 App ID / App Key，打开即自动连接同步，无需填写。如需改用你自己的应用，在「⚙ 云同步」里填写后保存即可。
+   ```bash
+   git remote add github git@github.com:jinjiao-king/monthly-checkin-web.git
+   git branch -M main
+   git push -u github main
+   ```
 
-> 如果部署后显示「同步失败」或「配置错误」，多半是服务端地址未配置：在 LeanCloud 控制台「数据存储 → 设置 → 应用凭证」里复制 Server 域名，填到页面的「服务端地址」栏再保存。
+2. 开启 Pages：仓库 **Settings → Pages**，Source 选「Deploy from a branch」，分支 `main`，目录 `/`。
 
-### 安全提示
+3. 绑定自定义域名：
+   - 在 Pages 设置页的 **Custom domain** 填入 `work.superdiscount.cn`
+   - 在域名解析服务商（阿里云 DNS）添加解析：`CNAME  work → jinjiao-king.github.io`
+   - 等待 Let's Encrypt 自动签发 HTTPS 证书后，勾选 **Enforce HTTPS**
 
-- 页面里只放了 **AppID / AppKey**（客户端公开密钥，本就会暴露在浏览器端，属正常用法）。
-- **MasterKey 属于最高权限私钥，永远不要写进前端代码**（有人拿到即可无视 ACL 读写你的数据）。仅在你自己服务器等可信环境使用。
-- Gitee Pages 免费版要求仓库**公开**，AppKey 对任何查看源码的人可见，读写的是同一个云数据。介意的话把仓库设为私有（Gitee 私有仓库 + 付费 Pages）或改用你自己的密钥。
-
-## 数据安全说明
-
-- 本地（localStorage）：即使云端临时连不上，页面也能正常离线使用。
-- 同步策略：拉取时以云端为准覆盖本地（防止换设备丢数据）；上传时以本地为准覆盖云端（两端合并成一致）。
+4. 访问 `https://work.superdiscount.cn` 或 `https://jinjiao-king.github.io/monthly-checkin-web/`
 
 ## 本地预览
 
@@ -48,41 +49,20 @@ python -m http.server 8000
 
 访问 http://localhost:8000
 
-## 部署到 Gitee Pages
-
-Gitee Pages 需要实名认证后才能使用（免费版需申请开通，通常一两个工作日内审核）。
-
-1. **注册 / 登录** gitee.com，并完成实名认证（设置 → 安全设置 → 手机/证件实名认证）。
-
-2. **新建仓库**
-   - 仓库名称建议：`daily-checkin-page`
-   - 仓库属性：**公开**
-   - 不要勾选「初始化仓库」的各项模板（或勾选也都可以）
-
-3. **把代码推到仓库**（含 `vendor/av-min.js`，一起推上去）
-
-   ```bash
-   git remote add origin https://gitee.com/<你的用户名>/daily-checkin-page.git
-   git branch -M master
-   git push -u origin master
-   ```
-
-4. **开启 Gitee Pages**
-   - 仓库页面 → 左侧「服务」→「Gitee Pages」
-   - 选择分支 `master`，部署目录填 `/`
-   - 点击「启动」/「部署」
-   - 免费版首次使用会提示先「申请升级」，按提示申请并由管理员审核通过后再部署启动。
-
-5. 部署成功后，会提供一个类似 `https://<用户名>.gitee.io/daily-checkin-page/` 的网址，把链接分享即可使用。
-
 ## 更新页面
-
-本地修改 `index.html` 后：
 
 ```
 git add .
 git commit -m "update"
-git push
+git push github main
 ```
 
-然后在 Gitee Pages 页面再点一次「更新」/「部署」即可生效。
+推送后 GitHub Pages 会自动重新构建部署（约 1 分钟），强制刷新（Ctrl+Shift+R）即可看到新版本。
+
+## 数据与安全说明
+
+- **云端存储**：数据保存在 LeanCloud `CheckinStore` 表，按账号（`u:<用户ID>`）一行独立存储，ACL 仅本人可读写
+- **登录密码**：密码存于 LeanCloud 用户系统，无法找回，请牢记
+- **注册资格**：注册前需回答你自定义的问题，答对才能创建账号
+- **客户端密钥**：页面内置 AppID / AppKey（客户端公开凭据，浏览器端正常），但数据已按账号做 ACL 隔离，他人无法读取你的数据
+- **本地兜底**：数据同时缓存在本机 localStorage，云端临时不可用时页面仍可离线使用
