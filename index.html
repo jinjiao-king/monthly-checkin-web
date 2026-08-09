@@ -14,8 +14,8 @@
     --text: #2c2f3a;
     --muted: #8a93a6;
     --green: #17b26a;
-    --green-bg: #e7f8ef;
-    --green-line: #b7e6cd;
+    --green-bg: #b3e6c9;
+    --green-line: #85d2a5;
     --red: #e5484d;
     --red-bg: #ffecec;
     --red-line: #f3c6c8;
@@ -75,7 +75,6 @@
   .week, .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
   .week { margin-bottom: 6px; }
   .week span { text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); padding: 2px 0; }
-  .week span.we { color: var(--red); }
 
   .day {
     background: #fff; border: 1px solid var(--line); border-radius: 10px;
@@ -90,7 +89,6 @@
   .day.today { outline: 2px solid var(--primary); outline-offset: 1px; }
 
   .num { font-size: 16px; font-weight: 700; }
-  .num.we { color: var(--red); }
   .badge { margin-left: 6px; font-size: 12px; color: var(--muted); }
   .ptasks { display: none; }
 
@@ -178,13 +176,12 @@
     .week span { color: #000; font-size: 11px; }
 
     .day { min-height: 0; border-radius: 0; padding: 3px 4px; border: 1px solid #999; }
-    .day.done { background: #d9f2e3; }
-    .day.partial { background: #ffdcdc; }
+    .day.done { background: var(--green-bg); }
+    .day.partial { background: var(--red-bg); }
     .day.today { outline: 1px solid #000; outline-offset: -1px; }
     .day.empty { border: none; }
 
     .num { font-size: 11px; }
-    .num.we { color: var(--red); }
     .badge { display: none; }
     .ptasks { display: block; margin-top: 2px; }
     .pi { display: block; font-size: 9px; line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -222,7 +219,7 @@
 
   <div class="calendar-card">
     <div class="week">
-      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="we">六</span><span class="we">日</span>
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
     </div>
     <div class="day-grid" id="dayGrid"></div>
   </div>
@@ -337,8 +334,6 @@
     cell.setAttribute('role', 'button');
     cell.tabIndex = 0;
 
-    var dow = (new Date(Y, M - 1, day).getDay() + 6) % 7;
-    var isWe = dow >= 5;
     var doneCt = 0;
     if (d && d.list) {
       for (var dI = 0; dI < d.list.length; dI++) if (d.list[dI].done) doneCt++;
@@ -357,7 +352,7 @@
     }
 
     cell.innerHTML =
-      '<div><span class="num' + (isWe ? ' we' : '') + '">' + day + '号</span>' + badge + '</div>' +
+      '<div><span class="num">' + day + '号</span>' + badge + '</div>' +
       '<div class="ptasks">' + ptasks + '</div>';
 
     cell.addEventListener('click', function () { openDay(day); });
