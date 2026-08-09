@@ -333,6 +333,7 @@
   var syncMsgEl = document.getElementById('syncMsg');
 
   var SYNC_KEY = 'dcck_sync';
+  var DEFAULT_SYNC = { appId: 'oxJAHgG89Dodaw5rHIWIK1ac-9Nh9j0Va', appKey: 'vWTUbFiyrk3CcUy0QcuD9zd1', server: '' };
   var syncCfg = loadSyncCfg();
   var syncTimer = null;
   var cloudObjId = null;
@@ -340,9 +341,12 @@
   function loadSyncCfg() {
     try {
       var p = JSON.parse(localStorage.getItem(SYNC_KEY));
-      if (p && p.appId && p.appKey) return { appId: p.appId, appKey: p.appKey, server: p.server || '' };
+      if (p) {
+        if (p.disabled) return { appId: '', appKey: '', server: '', disabled: true };
+        if (p.appId && p.appKey) return { appId: p.appId, appKey: p.appKey, server: p.server || '' };
+      }
     } catch (e) {}
-    return { appId: '', appKey: '', server: '' };
+    return { appId: DEFAULT_SYNC.appId, appKey: DEFAULT_SYNC.appKey, server: DEFAULT_SYNC.server };
   }
   function persistSyncCfg() {
     try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch (e) {}
@@ -715,7 +719,7 @@
   });
 
   document.getElementById('syncOff').addEventListener('click', function () {
-    localStorage.removeItem(SYNC_KEY);
+    localStorage.setItem(SYNC_KEY, JSON.stringify({ disabled: true }));
     syncCfg = loadSyncCfg();
     cloudObjId = null;
     if (syncTimer) clearTimeout(syncTimer);
