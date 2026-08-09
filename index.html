@@ -3,18 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>每日计划打卡表</title>
+<title>每日计划打卡表 · 日历版</title>
 <style>
   :root {
     --primary: #4b6ef7;
     --primary-dark: #3a58d6;
     --bg: #f4f6fb;
     --card: #ffffff;
-    --line: #dde3ef;
+    --line: #dfe5f0;
     --text: #2c2f3a;
     --muted: #8a93a6;
-    --weekend: #fff3f3;
-    --today: #e8ebff;
+    --green: #17b26a;
+    --green-bg: #e7f8ef;
+    --green-line: #b7e6cd;
+    --red: #e5484d;
+    --red-bg: #ffecec;
+    --red-line: #f3c6c8;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,21 +30,17 @@
     padding: 20px 16px 60px;
   }
 
-  .page { max-width: 1000px; margin: 0 auto; }
+  .page { max-width: 960px; margin: 0 auto; }
 
   /* ---- toolbar ---- */
   .toolbar {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
     gap: 12px; background: var(--card); border-radius: 14px;
     padding: 12px 16px; box-shadow: 0 2px 12px rgba(30, 42, 80, .06);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
-
   .month-bar { display: flex; align-items: center; gap: 8px; }
-  .month-bar h1 {
-    font-size: 22px; font-weight: 700; min-width: 128px; text-align: center;
-    letter-spacing: 1px;
-  }
+  .month-bar h1 { font-size: 22px; font-weight: 700; min-width: 128px; text-align: center; }
   .nav-btn {
     width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px;
     background: #fff; color: var(--text); font-size: 16px; cursor: pointer;
@@ -49,7 +49,6 @@
   .nav-btn:hover { border-color: var(--primary); color: var(--primary); }
 
   .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
   .btn {
     border: 1px solid var(--line); background: #fff; color: var(--text);
     padding: 7px 14px; border-radius: 9px; font-size: 14px; cursor: pointer;
@@ -58,43 +57,44 @@
   .btn:hover { border-color: var(--primary); color: var(--primary); }
   .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
   .btn.primary:hover { background: var(--primary-dark); }
-  .btn.danger:hover { border-color: #e5484d; color: #e5484d; }
-
+  .btn.danger:hover { border-color: var(--red); color: var(--red); }
   .progress { font-size: 13px; color: var(--muted); }
 
-  /* ---- table ---- */
-  .card {
-    background: var(--card); border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(30, 42, 80, .06); overflow: hidden;
+  /* ---- legend ---- */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+  .legend li { display: flex; align-items: center; gap: 6px; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--line); display: inline-block; }
+  .chip.g { background: var(--green-bg); border-color: var(--green-line); }
+  .chip.r { background: var(--red-bg); border-color: var(--red-line); }
+
+  /* ---- calendar ---- */
+  .calendar-card {
+    background: var(--card); border-radius: 14px; padding: 14px;
+    box-shadow: 0 2px 12px rgba(30, 42, 80, .06);
   }
-  table { width: 100%; border-collapse: collapse; }
+  .week, .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .week { margin-bottom: 6px; }
+  .week span { text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); padding: 2px 0; }
+  .week span.we { color: var(--red); }
 
-  thead th {
-    background: var(--primary); color: #fff; font-size: 14px; font-weight: 600;
-    padding: 10px 6px; white-space: nowrap;
+  .day {
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    min-height: 92px; padding: 6px 8px; cursor: pointer;
+    transition: transform .06s, box-shadow .15s; user-select: none;
   }
+  .day:hover { box-shadow: 0 3px 10px rgba(30, 42, 80, .14); transform: translateY(-1px); }
+  .day.empty { background: transparent; border-color: #e7ecf4; border-style: dashed; cursor: default; }
+  .day.empty:hover { box-shadow: none; transform: none; }
+  .day.done { background: var(--green-bg); border-color: var(--green-line); }
+  .day.partial { background: var(--red-bg); border-color: var(--red-line); }
+  .day.today { outline: 2px solid var(--primary); outline-offset: 1px; }
 
-  tbody td { border-bottom: 1px solid var(--line); padding: 0; }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr.weekend { background: var(--weekend); }
-  tbody tr.today td { background: var(--today); box-shadow: inset 0 0 0 10px var(--card); }
+  .num { font-size: 16px; font-weight: 700; }
+  .num.we { color: var(--red); }
+  .badge { margin-left: 6px; font-size: 12px; color: var(--muted); }
+  .ptasks { display: none; }
 
-  .col-date { width: 68px; text-align: center; font-size: 15px; font-weight: 600; }
-  .col-wd { width: 52px; text-align: center; font-size: 12px; color: var(--muted); }
-
-  .col-check { width: 54px; text-align: center; }
-  .col-plan { width: 1%; }
-
-  input[type="checkbox"].check {
-    width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; vertical-align: middle;
-  }
-
-  input.plan {
-    width: 100%; border: none; outline: none; font-size: 14px; font-family: inherit;
-    padding: 10px 12px; background: transparent; color: var(--text);
-  }
-  input.plan::placeholder { color: #c4c9d6; }
-  input.plan:focus { background: #f2f5ff; }
+  .print-title { display: none; }
 
   /* ---- goals ---- */
   .goals {
@@ -116,30 +116,83 @@
 
   footer { margin-top: 14px; font-size: 12px; color: var(--muted); text-align: center; }
 
+  /* ---- modal ---- */
+  .backdrop {
+    position: fixed; inset: 0; background: rgba(23, 29, 48, .4);
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .backdrop[hidden] { display: none; }
+  .modal {
+    background: #fff; border-radius: 16px; width: 100%; max-width: 420px;
+    box-shadow: 0 18px 50px rgba(20, 27, 55, .28); overflow: hidden;
+  }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { font-size: 17px; font-weight: 700; }
+  .modal-count { font-size: 13px; color: var(--muted); }
+  .close-x {
+    border: none; background: none; font-size: 20px; line-height: 1; color: var(--muted);
+    cursor: pointer; padding: 2px 6px; border-radius: 6px;
+  }
+  .close-x:hover { color: var(--red); background: var(--red-bg); }
+
+  .modal-add { display: flex; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .modal-add input {
+    flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+    font-size: 14px; font-family: inherit; color: var(--text);
+  }
+  .modal-add input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .modal-add button {
+    border: none; background: var(--primary); color: #fff; border-radius: 8px;
+    padding: 0 16px; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .modal-add button:hover { background: var(--primary-dark); }
+
+  .task-list { list-style: none; padding: 6px 12px; max-height: 300px; overflow-y: auto; }
+  .task-item { display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-bottom: 1px solid #f0f3f9; }
+  .task-item:last-child { border-bottom: none; }
+  .task-item input[type="checkbox"] { width: 19px; height: 19px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .task-text { flex: 1; font-size: 15px; word-break: break-all; }
+  .task-item.done .task-text { text-decoration: line-through; color: var(--muted); }
+  .task-del {
+    border: none; background: none; color: var(--muted); font-size: 18px; line-height: 1;
+    cursor: pointer; padding: 2px 8px; border-radius: 6px; flex-shrink: 0;
+  }
+  .task-del:hover { color: var(--red); background: var(--red-bg); }
+  .task-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 24px 0 28px; }
+  .modal-foot { padding: 12px 18px; border-top: 1px solid var(--line); text-align: right; }
+  .modal-foot button {
+    border: 1px solid var(--line); background: #fff; padding: 7px 18px; border-radius: 8px;
+    font-size: 14px; cursor: pointer;
+  }
+  .modal-foot button:hover { border-color: var(--primary); color: var(--primary); }
+
   /* ---- print ---- */
   @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { background: #fff; padding: 0; }
-    .toolbar { display: none; }
-    footer { display: none; }
+    .toolbar, .modal, footer { display: none; }
+    .print-title { display: block; text-align: center; font-size: 16px; margin-bottom: 8px; }
 
-    .card, .goals { box-shadow: none; border-radius: 0; }
-    table { table-layout: fixed; }
+    .calendar-card { box-shadow: none; border-radius: 0; padding: 0; }
+    .week, .day-grid { gap: 3px; }
+    .week span { color: #000; font-size: 11px; }
 
-    thead th { background: #333; color: #fff; border-bottom: 2px solid #000; font-size: 12px; }
-    tbody td { border-bottom: 1px solid #bbb; font-size: 12px; }
-    tbody tr.weekend { background: #f3f3f3; }
-    tbody tr.today td { background: #fff; box-shadow: none; }
+    .day { min-height: 0; border-radius: 0; padding: 3px 4px; border: 1px solid #999; }
+    .day.done { background: #d9f2e3; }
+    .day.partial { background: #ffdcdc; }
+    .day.today { outline: 1px solid #000; outline-offset: -1px; }
+    .day.empty { border: none; }
 
-    .col-date { width: 8%; }
-    .col-wd { width: 8%; }
-    .col-check { width: 11%; }
-    .col-plan { width: 21%; }
+    .num { font-size: 11px; }
+    .num.we { color: var(--red); }
+    .badge { display: none; }
+    .ptasks { display: block; margin-top: 2px; }
+    .pi { display: block; font-size: 9px; line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    input.plan { font-size: 12px; padding: 4px; }
-    input[type="checkbox"].check { width: 14px; height: 14px; }
-    .goal-input { font-size: 12px; padding: 4px; }
+    .goals { box-shadow: none; border-radius: 0; padding: 10px 0 0; }
+    .goal-input { font-size: 12px; padding: 3px 8px; border: 1px solid #999; }
 
-    @page { size: A4 portrait; margin: 9mm 8mm; }
+    @page { size: A4 portrait; margin: 8mm 7mm; }
   }
 </style>
 </head>
@@ -159,22 +212,19 @@
     </div>
   </div>
 
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th class="col-date">日期</th>
-          <th class="col-wd">星期</th>
-          <th class="col-check">学习</th>
-          <th class="col-plan">学习计划</th>
-          <th class="col-check">锻炼</th>
-          <th class="col-plan">复盘计划</th>
-          <th class="col-check">复盘</th>
-          <th class="col-plan">锻炼计划</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
+  <ul class="legend">
+    <li><span class="chip g"></span>当天任务全部完成</li>
+    <li><span class="chip r"></span>有待完成任务</li>
+    <li><span class="chip"></span>当日暂无任务</li>
+  </ul>
+
+  <h2 class="print-title" id="printTitle">2026年8月 每日计划打卡表</h2>
+
+  <div class="calendar-card">
+    <div class="week">
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="we">六</span><span class="we">日</span>
+    </div>
+    <div class="day-grid" id="dayGrid"></div>
   </div>
 
   <div class="goals">
@@ -184,28 +234,57 @@
     <div class="goal-row"><span class="goal-label">目标3</span><input class="goal-input" id="goal2" placeholder="本月最重要的目标…"></div>
   </div>
 
-  <footer>数据自动保存在本机浏览器中，各月数据相互独立</footer>
+  <footer>点击日期格子添加/管理当天任务，数据自动保存在本机浏览器中，各月独立存储</footer>
+</div>
+
+<div class="backdrop" id="backdrop" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">8月15号</h2>
+      <span class="modal-count" id="modalCount"></span>
+      <button class="close-x" id="modalClose" title="关闭">&times;</button>
+    </div>
+    <form class="modal-add" id="addForm">
+      <input id="taskInput" placeholder="添加今天的任务，回车即可…" autocomplete="off">
+      <button type="submit">＋ 添加</button>
+    </form>
+    <ul class="task-list" id="taskList"></ul>
+    <div class="modal-foot"><button id="modalClose2">完成</button></div>
+  </div>
 </div>
 
 <script>
 (function () {
   'use strict';
 
-  var WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+  var WEEK = ['一', '二', '三', '四', '五', '六', '日'];
+  var MONTH_CN = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
-  function emptyData() {
-    return { daily: {}, goals: ['', '', ''] };
-  }
-  function keyOf(y, m) {
-    return 'dcck:' + y + '-' + String(m).padStart(2, '0');
-  }
+  var gridEl = document.getElementById('dayGrid');
+  var monthTitle = document.getElementById('monthTitle');
+  var printTitle = document.getElementById('printTitle');
+  var progressEl = document.getElementById('progress');
+
+  var backdrop = document.getElementById('backdrop');
+  var modalTitle = document.getElementById('modalTitle');
+  var modalCount = document.getElementById('modalCount');
+  var addForm = document.getElementById('addForm');
+  var taskInput = document.getElementById('taskInput');
+  var taskList = document.getElementById('taskList');
+
+  var Y, M, data;
+  var activeDay = null;
+
+  function emptyData() { return { days: {}, goals: ['', '', ''] }; }
+  function keyOf(y, m) { return 'dcck2:' + y + '-' + String(m).padStart(2, '0'); }
+
   function load(y, m) {
     try {
       var raw = localStorage.getItem(keyOf(y, m));
       if (raw) {
         var parsed = JSON.parse(raw);
         return {
-          daily: parsed.daily || {},
+          days: parsed.days || {},
           goals: parsed.goals || ['', '', '']
         };
       }
@@ -216,106 +295,199 @@
     try { localStorage.setItem(keyOf(Y, M), JSON.stringify(data)); } catch (e) {}
   }
 
-  var tbody = document.getElementById('tbody');
-  var monthTitle = document.getElementById('monthTitle');
-  var progressEl = document.getElementById('progress');
-  var Y, M, data;
-
   function todayRef() {
     var now = new Date();
     return { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
   }
 
+  function listOf(day) {
+    var d = data.days[day] = data.days[day] || { list: [] };
+    return d.list;
+  }
+
+  function statusOf(d) {
+    var list = d && d.list;
+    if (!list || !list.length) return 'none';
+    for (var i = 0; i < list.length; i++) if (!list[i].done) return 'partial';
+    return 'done';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   function updateProgress() {
     var days = new Date(Y, M, 0).getDate();
-    var on = 0;
+    var doneAll = 0;
     for (var day = 1; day <= days; day++) {
-      var d = data.daily[day];
-      if (d && (d.learning || d.workout || d.reflect)) on++;
+      var d = data.days[day];
+      if (d && d.list && d.list.length && statusOf(d) === 'done') doneAll++;
     }
-    progressEl.textContent = '本月打卡 ' + on + ' / ' + days + ' 天';
+    progressEl.textContent = '已完成 ' + doneAll + ' / ' + days + ' 天';
+  }
+
+  function buildCell(day, d) {
+    var st = statusOf(d);
+    var cell = document.createElement('div');
+    cell.className = 'day ' + st;
+    var t = todayRef();
+    if (t.y === Y && t.m === M && t.d === day) cell.classList.add('today');
+    cell.setAttribute('role', 'button');
+    cell.tabIndex = 0;
+
+    var dow = (new Date(Y, M - 1, day).getDay() + 6) % 7;
+    var isWe = dow >= 5;
+    var doneCt = 0;
+    if (d && d.list) {
+      for (var dI = 0; dI < d.list.length; dI++) if (d.list[dI].done) doneCt++;
+    }
+    var badge = '';
+    if (d && d.list && d.list.length) {
+      badge = '<span class="badge">' + doneCt + '/' + d.list.length + '</span>';
+    }
+
+    var ptasks = '';
+    if (d && d.list) {
+      for (var i = 0; i < d.list.length; i++) {
+        var it = d.list[i];
+        ptasks += '<span class="pi">' + (it.done ? '&#9745;' : '&#9744;') + ' ' + escapeHtml(it.t) + '</span>';
+      }
+    }
+
+    cell.innerHTML =
+      '<div><span class="num' + (isWe ? ' we' : '') + '">' + day + '号</span>' + badge + '</div>' +
+      '<div class="ptasks">' + ptasks + '</div>';
+
+    cell.addEventListener('click', function () { openDay(day); });
+    cell.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(day); }
+    });
+    return cell;
   }
 
   function render() {
     monthTitle.textContent = Y + '年' + M + '月';
-    var days = new Date(Y, M, 0).getDate();
-    var t = todayRef();
-    var isCur = t.y === Y && t.m === M;
+    printTitle.textContent = Y + '年' + M + '月 每日计划打卡表';
 
-    tbody.innerHTML = '';
+    var daysInMonth = new Date(Y, M, 0).getDate();
+    var offset = (new Date(Y, M - 1, 1).getDay() + 6) % 7; /* Monday first */
+    var totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+
+    gridEl.innerHTML = '';
     var frag = document.createDocumentFragment();
 
-    for (var day = 1; day <= days; day++) {
-      var d = data.daily[day] = data.daily[day] || {};
-      var dow = new Date(Y, M - 1, day).getDay();
-      var tr = document.createElement('tr');
-      if (dow === 0 || dow === 6) tr.classList.add('weekend');
-      if (isCur && t.d === day) tr.classList.add('today');
-
-      var dateTd = document.createElement('td');
-      dateTd.className = 'col-date';
-      dateTd.textContent = day + '号';
-      tr.appendChild(dateTd);
-
-      var wdTd = document.createElement('td');
-      wdTd.className = 'col-wd';
-      wdTd.textContent = '周' + WEEK[dow];
-      tr.appendChild(wdTd);
-
-      var checks = ['learning', 'workout', 'reflect'];
-      var plans = ['studyPlan', 'reviewPlan', 'exercisePlan'];
-      var planPlace = ['学习计划', '复盘计划', '锻炼计划'];
-
-      for (var i = 0; i < 3; i++) {
-        var ck = checks[i];
-        var checkTd = document.createElement('td');
-        checkTd.className = 'col-check';
-        var box = document.createElement('input');
-        box.type = 'checkbox';
-        box.className = 'check';
-        box.checked = !!d[ck];
-        box.setAttribute('aria-label', planPlace[i] + '已完成');
-        box.addEventListener('change', (function (dd, k, b) {
-          return function () {
-            if (b.checked) {
-              dd[k] = true;
-            } else {
-              delete dd[k];
-            }
-            save();
-            updateProgress();
-          };
-        })(d, ck, box));
-        checkTd.appendChild(box);
-        tr.appendChild(checkTd);
-
-        var pk = plans[i];
-        var planTd = document.createElement('td');
-        planTd.className = 'col-plan';
-        var pin = document.createElement('input');
-        pin.type = 'text';
-        pin.className = 'plan';
-        pin.placeholder = planPlace[i] + '…';
-        pin.value = d[pk] || '';
-        pin.setAttribute('autocomplete', 'off');
-        pin.addEventListener('input', (function (dd, pk, input) {
-          return function () {
-            dd[pk] = input.value;
-            save();
-          };
-        })(d, pk, pin));
-        planTd.appendChild(pin);
-        tr.appendChild(planTd);
-      }
-
-      frag.appendChild(tr);
+    for (var i = 0; i < offset; i++) {
+      var e = document.createElement('div');
+      e.className = 'day empty';
+      frag.appendChild(e);
     }
-
-    tbody.appendChild(frag);
+    for (var day = 1; day <= daysInMonth; day++) {
+      frag.appendChild(buildCell(day, data.days[day]));
+    }
+    for (var k = offset + daysInMonth; k < totalCells; k++) {
+      var e2 = document.createElement('div');
+      e2.className = 'day empty';
+      frag.appendChild(e2);
+    }
+    gridEl.appendChild(frag);
     updateProgress();
   }
 
+  /* ---- modal ---- */
+  function openDay(day) {
+    activeDay = day;
+    modalTitle.textContent = Y + '年' + M + '月' + day + '号 · 任务';
+    backdrop.hidden = false;
+    taskInput.value = '';
+    renderTaskList();
+    taskInput.focus();
+  }
+  function closeModal() {
+    backdrop.hidden = true;
+    activeDay = null;
+  }
+
+  function renderTaskList() {
+    taskList.innerHTML = '';
+    var items = listOf(activeDay);
+    var doneCount = 0;
+
+    if (!items.length) {
+      var hint = document.createElement('div');
+      hint.className = 'task-empty';
+      hint.textContent = '今天还没有任务，添加一个吧';
+      taskList.appendChild(hint);
+    } else {
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        (function (idx, item) {
+          var li = document.createElement('li');
+          li.className = 'task-item' + (item.done ? ' done' : '');
+
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!item.done;
+          cb.addEventListener('change', function () {
+            item.done = cb.checked;
+            save();
+            refresh();
+          });
+
+          var span = document.createElement('span');
+          span.className = 'task-text';
+          span.textContent = item.t;
+
+          var del = document.createElement('button');
+          del.className = 'task-del';
+          del.type = 'button';
+          del.textContent = '\u2715';
+          del.title = '删除';
+          del.addEventListener('click', function () {
+            items.splice(idx, 1);
+            save();
+            refresh();
+          });
+
+          li.appendChild(cb);
+          li.appendChild(span);
+          li.appendChild(del);
+          taskList.appendChild(li);
+          if (item.done) doneCount++;
+        })(i, it);
+      }
+    }
+    modalCount.textContent = items.length ? doneCount + ' / ' + items.length + ' 已完成' : '';
+  }
+
+  addForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (activeDay == null) return;
+    var v = taskInput.value.trim();
+    if (!v) return;
+    listOf(activeDay).push({ t: v, done: false });
+    taskInput.value = '';
+    save();
+    refresh();
+    taskInput.focus();
+  });
+
+  function refresh() {
+    render();
+    if (activeDay != null) renderTaskList();
+  }
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalClose2').addEventListener('click', closeModal);
+  backdrop.addEventListener('click', function (e) { if (e.target === backdrop) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  /* ---- nav ---- */
   function goto(y, m) {
+    closeModal();
     Y = y; M = m;
     data = load(y, m);
     render();
@@ -338,7 +510,7 @@
     window.print();
   });
   document.getElementById('clearBtn').addEventListener('click', function () {
-    if (!confirm('确定清空 ' + Y + '年' + M + '月 的全部打卡记录和目标吗？')) return;
+    if (!confirm('确定清空 ' + Y + '年' + M + '月 的全部任务和目标吗？')) return;
     data = emptyData();
     localStorage.removeItem(keyOf(Y, M));
     render();
