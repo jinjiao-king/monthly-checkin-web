@@ -705,7 +705,7 @@
       var pre = '<div class="pre-visible">';
       for (var i = 0; i < shown.length; i++) {
         var it = shown[i];
-        pre += '<label class="pi' + (it.done ? ' done' : '') + '"><input type="checkbox" tabindex="-1"' + (it.done ? ' checked' : '') +
+        pre += '<label class="pi' + (it.done ? ' done' : '') + '"><input type="checkbox" tabindex="-1" data-done="' + (it.done ? '1' : '0') + '"' + (it.done ? ' checked' : '') +
           '><span class="pt">' + escapeHtml(it.t) + '</span></label>';
       }
       if (items.length > shown.length) pre += '<div class="pi-more">＋' + (items.length - shown.length) + ' 条未显示</div>';
@@ -715,7 +715,7 @@
         var more = '<div class="pre-more">';
         for (var j = shown.length; j < items.length; j++) {
           var it2 = items[j];
-          more += '<label class="pi' + (it2.done ? ' done' : '') + '"><input type="checkbox" tabindex="-1"' + (it2.done ? ' checked' : '') +
+          more += '<label class="pi' + (it2.done ? ' done' : '') + '"><input type="checkbox" tabindex="-1" data-done="' + (it2.done ? '1' : '0') + '"' + (it2.done ? ' checked' : '') +
             '><span class="pt">' + escapeHtml(it2.t) + '</span></label>';
         }
         more += '</div>';
@@ -850,6 +850,17 @@
   backdrop.addEventListener('click', function (e) { if (e.target === backdrop) closeModal(); });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeModal();
+  });
+
+  gridEl.addEventListener('click', function (e) {
+    var t = e.target;
+    if (t && t.matches && t.matches('.pi input')) e.preventDefault();
+  });
+  gridEl.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t && t.matches && t.matches('.pi input')) {
+      t.checked = t.getAttribute('data-done') === '1';
+    }
   });
 
   /* ---- nav ---- */
