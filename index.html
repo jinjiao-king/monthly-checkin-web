@@ -78,8 +78,9 @@
 
   .day {
     background: #fff; border: 1px solid var(--line); border-radius: 10px;
-    min-height: 92px; padding: 6px 8px; cursor: pointer;
+    height: 92px; padding: 6px 8px; cursor: pointer;
     transition: transform .06s, box-shadow .15s; user-select: none;
+    display: flex; flex-direction: column; overflow: hidden;
   }
   .day:hover { box-shadow: 0 3px 10px rgba(30, 42, 80, .14); transform: translateY(-1px); }
   .day.empty { background: transparent; border-color: #e7ecf4; border-style: dashed; cursor: default; }
@@ -88,9 +89,12 @@
   .day.partial { background: var(--red-bg); border-color: var(--red-line); }
   .day.today { outline: 2px solid var(--primary); outline-offset: 1px; }
 
-  .num { font-size: 16px; font-weight: 700; }
-  .badge { margin-left: 6px; font-size: 12px; color: var(--muted); }
-  .ptasks { display: none; }
+  .num { font-size: 14px; font-weight: 700; }
+  .badge { margin-left: 6px; font-size: 11px; color: var(--muted); }
+  .ptasks { flex: 1; margin-top: 3px; overflow: hidden; }
+  .pi { display: flex; align-items: center; gap: 5px; font-size: 11px; line-height: 1.35; }
+  .pi input { width: 11px; height: 11px; margin: 0; flex-shrink: 0; accent-color: var(--green); }
+  .pt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .print-title { display: none; }
 
@@ -230,7 +234,7 @@
     .week, .day-grid { gap: 3px; }
     .week span { color: #000; font-size: 11px; }
 
-    .day { min-height: 0; border-radius: 0; padding: 3px 4px; border: 1px solid #999; }
+    .day { min-height: 0; height: auto; overflow: visible; border-radius: 0; padding: 3px 4px; border: 1px solid #999; }
     .day.done { background: var(--green-bg); }
     .day.partial { background: var(--red-bg); }
     .day.today { outline: 1px solid #000; outline-offset: -1px; }
@@ -239,7 +243,8 @@
     .num { font-size: 11px; }
     .badge { display: none; }
     .ptasks { display: block; margin-top: 2px; }
-    .pi { display: block; font-size: 9px; line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pi { font-size: 9px; line-height: 1.45; }
+    .pi input { width: 8px; height: 8px; }
 
     .goals { box-shadow: none; border-radius: 0; padding: 10px 0 0; }
     .goal-input { font-size: 12px; padding: 3px 8px; border: 1px solid #999; }
@@ -689,7 +694,8 @@
     if (d && d.list) {
       for (var i = 0; i < d.list.length; i++) {
         var it = d.list[i];
-        ptasks += '<span class="pi">' + (it.done ? '&#9745;' : '&#9744;') + ' ' + escapeHtml(it.t) + '</span>';
+        ptasks += '<label class="pi"><input type="checkbox" disabled' + (it.done ? ' checked' : '') +
+          '><span class="pt">' + escapeHtml(it.t) + '</span></label>';
       }
     }
 
