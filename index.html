@@ -258,10 +258,12 @@
       <input id="loginUser" autocomplete="username" spellcheck="false" required>
       <label>密码</label>
       <input id="loginPass" type="password" autocomplete="current-password" required>
+      <label id="loginQLabel" hidden>注册问题：我的微信名称在西游记里面取的是哪个？</label>
+      <input id="loginQ" hidden placeholder="回答正确后才能注册" autocomplete="off">
       <p class="login-msg" id="loginMsg"></p>
       <button type="submit" class="login-btn primary" id="loginSubmit">登 录</button>
       <button type="button" class="login-btn" id="loginReg">注册新账号</button>
-      <p class="login-tip">首次使用请先注册；密码无法找回，请牢记</p>
+      <p class="login-tip">首次使用请回答问题并注册；密码无法找回，请牢记</p>
     </form>
   </div>
 </div>
@@ -394,7 +396,12 @@
   var loginPassEl = document.getElementById('loginPass');
   var loginMsgEl = document.getElementById('loginMsg');
   var loginRegEl = document.getElementById('loginReg');
+  var loginSubmitEl = document.getElementById('loginSubmit');
+  var loginQLabelEl = document.getElementById('loginQLabel');
+  var loginQEl = document.getElementById('loginQ');
   var logoutBtnEl = document.getElementById('logoutBtn');
+  var regMode = false;
+  var REQUIRED_ANSWER = '金角大王';
 
   function localPrefix() { return 'dcck2:' + (curUserId ? curUserId + ':' : ''); }
   function cloudUserKey() { return 'u:' + curUserId; }
@@ -471,10 +478,24 @@
     hideLoginPage();
     loginSession();
   }
+  function setRegMode(on) {
+    regMode = !!on;
+    loginQLabelEl.hidden = !regMode;
+    loginQEl.hidden = !regMode;
+    loginQEl.required = regMode;
+    loginSubmitEl.textContent = regMode ? '注册并登录' : '登 录';
+    loginRegEl.textContent = regMode ? '返回登录' : '注册新账号';
+    if (!regMode) loginQEl.value = '';
+    setLoginMsg('', '');
+  }
   function doAuth(isRegister) {
     var name = loginUserEl.value.trim();
     var pass = loginPassEl.value;
     if (!name || !pass) { setLoginMsg('fail', '请输入用户名和密码'); return; }
+    if (isRegister && loginQEl.value.trim() !== REQUIRED_ANSWER) {
+      setLoginMsg('fail', '注册问题回答不正确，无法注册');
+      return;
+    }
     setLoginMsg('', '请稍候…');
     var p = isRegister
       ? window.AV.User.signUp(name, pass)
@@ -898,10 +919,10 @@
 
   loginFormEl.addEventListener('submit', function (e) {
     e.preventDefault();
-    doAuth(false);
+    doAuth(regMode);
   });
   loginRegEl.addEventListener('click', function () {
-    doAuth(true);
+    setRegMode(!regMode);
   });
   logoutBtnEl.addEventListener('click', function () {
     window.AV.User.logOut();
