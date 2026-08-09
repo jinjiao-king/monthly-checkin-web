@@ -352,10 +352,17 @@
     try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch (e) {}
   }
   function avReady() { return !!(window.AV && window.AV.init); }
+  var avInitAppId = null;
   function avInit() {
+    if (!avReady()) throw new Error('云端SDK未加载');
+    if (avInitAppId) {
+      if (avInitAppId !== syncCfg.appId) throw new Error('SDK已初始化，更换配置请刷新页面');
+      return;
+    }
     var opt = { appId: syncCfg.appId, appKey: syncCfg.appKey };
     if (syncCfg.server) opt.serverURLs = syncCfg.server;
     window.AV.init(opt);
+    avInitAppId = syncCfg.appId;
   }
   function setSyncStatus(cls, txt) {
     syncStatusEl.textContent = txt;
