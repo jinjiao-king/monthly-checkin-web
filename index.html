@@ -93,8 +93,9 @@
   .badge { margin-left: 6px; font-size: 11px; color: var(--muted); }
   .ptasks { flex: 1; margin-top: 3px; overflow: hidden; }
   .pi { display: flex; align-items: center; gap: 5px; font-size: 11px; line-height: 1.35; }
-  .pi input { width: 11px; height: 11px; margin: 0; flex-shrink: 0; accent-color: var(--green); }
+  .pi input { width: 11px; height: 11px; margin: 0; flex-shrink: 0; accent-color: var(--green); pointer-events: none; }
   .pt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pi.done .pt { text-decoration: line-through; color: var(--muted); }
   .pre-more { display: none; }
   .pi-more { font-size: 10px; color: var(--muted); margin-top: 1px; white-space: nowrap; }
 
@@ -704,7 +705,7 @@
       var pre = '<div class="pre-visible">';
       for (var i = 0; i < shown.length; i++) {
         var it = shown[i];
-        pre += '<label class="pi"><input type="checkbox" disabled' + (it.done ? ' checked' : '') +
+        pre += '<label class="pi' + (it.done ? ' done' : '') + '"><input type="checkbox" tabindex="-1"' + (it.done ? ' checked' : '') +
           '><span class="pt">' + escapeHtml(it.t) + '</span></label>';
       }
       if (items.length > shown.length) pre += '<div class="pi-more">＋' + (items.length - shown.length) + ' 条未显示</div>';
@@ -714,7 +715,7 @@
         var more = '<div class="pre-more">';
         for (var j = shown.length; j < items.length; j++) {
           var it2 = items[j];
-          more += '<label class="pi"><input type="checkbox" disabled' + (it2.done ? ' checked' : '') +
+          more += '<label class="pi' + (it2.done ? ' done' : '') + '"><input type="checkbox" tabindex="-1"' + (it2.done ? ' checked' : '') +
             '><span class="pt">' + escapeHtml(it2.t) + '</span></label>';
         }
         more += '</div>';
