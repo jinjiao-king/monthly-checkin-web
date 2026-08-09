@@ -188,6 +188,36 @@
   .sync-msg.ok { color: var(--green); }
   .sync-msg.fail { color: var(--red); }
 
+  /* ---- login gate ---- */
+  .login-gate {
+    position: fixed; inset: 0; z-index: 200; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .login-gate[hidden] { display: none; }
+  .login-card {
+    background: #fff; border-radius: 16px; width: 100%; max-width: 360px; padding: 28px 26px;
+    box-shadow: 0 18px 50px rgba(20, 27, 55, .18);
+  }
+  .login-card h1 { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  .login-sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .login-form label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+  .login-form input {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px;
+    font-size: 14px; font-family: inherit; color: var(--text);
+  }
+  .login-form input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .login-msg { min-height: 18px; margin: 12px 0 6px; font-size: 13px; }
+  .login-msg.ok { color: var(--green); }
+  .login-msg.fail { color: var(--red); }
+  .login-btn {
+    width: 100%; margin-top: 8px; border: 1px solid var(--line); background: #fff; padding: 10px;
+    border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600;
+  }
+  .login-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .login-btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .login-btn.primary:hover { background: var(--primary-dark); color: #fff; }
+  .login-tip { text-align: center; color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.6; }
+
   /* ---- print ---- */
   @media print {
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -218,6 +248,23 @@
 </style>
 </head>
 <body>
+<div class="login-gate" id="loginGate" hidden>
+  <div class="login-card">
+    <h1>每日计划打卡表</h1>
+    <p class="login-sub">登录后，打卡数据将绑定到你的账号并跨设备同步</p>
+    <form class="login-form" id="loginForm">
+      <label>用户名</label>
+      <input id="loginUser" autocomplete="username" spellcheck="false" required>
+      <label>密码</label>
+      <input id="loginPass" type="password" autocomplete="current-password" required>
+      <p class="login-msg" id="loginMsg"></p>
+      <button type="submit" class="login-btn primary" id="loginSubmit">登 录</button>
+      <button type="button" class="login-btn" id="loginReg">注册新账号</button>
+      <p class="login-tip">首次使用请先注册；密码无法找回，请牢记</p>
+    </form>
+  </div>
+</div>
+
 <div class="page">
   <div class="toolbar">
     <div class="month-bar">
@@ -231,6 +278,7 @@
       <span class="sync-status" id="syncStatus">云同步：未开启</span>
       <button class="btn danger" id="clearBtn">清空本月</button>
       <button class="btn" id="syncBtn" title="设置 LeanCloud 云同步">&#9881; 云同步</button>
+      <button class="btn" id="logoutBtn" title="退出登录" hidden>退出</button>
       <button class="btn primary" id="printBtn">&#128424; 打印</button>
     </div>
   </div>
@@ -257,7 +305,7 @@
     <div class="goal-row"><span class="goal-label">目标3</span><input class="goal-input" id="goal2" placeholder="本月最重要的目标…"></div>
   </div>
 
-  <footer>点击日期格子添加/管理当天任务；数据保存在本机浏览器，开启云同步后额外备份到 LeanCloud，各月独立存储</footer>
+  <footer>点击日期格子添加/管理当天任务；打卡数据绑定登录账号，云端按账号独立存储，跨设备同步</footer>
 </div>
 
 <div class="backdrop" id="syncBackdrop" hidden>
@@ -337,6 +385,104 @@
   var syncCfg = loadSyncCfg();
   var syncTimer = null;
   var cloudObjId = null;
+  var curUserId = null;
+
+  var loginGateEl = document.getElementById('loginGate');
+  var loginFormEl = document.getElementById('loginForm');
+  var loginUserEl = document.getElementById('loginUser');
+  var loginPassEl = document.getElementById('loginPass');
+  var loginMsgEl = document.getElementById('loginMsg');
+  var loginRegEl = document.getElementById('loginReg');
+  var logoutBtnEl = document.getElementById('logoutBtn');
+
+  function localPrefix() { return 'dcck2:' + (curUserId ? curUserId + ':' : ''); }
+  function cloudUserKey() { return 'u:' + curUserId; }
+  function setUser(uid) { curUserId = uid; }
+
+  function setLoginMsg(cls, txt) {
+    loginMsgEl.textContent = txt;
+    loginMsgEl.className = 'login-msg' + (cls ? ' ' + cls : '');
+  }
+  function showLoginPage() {
+    loginGateEl.hidden = false;
+    logoutBtnEl.hidden = true;
+  }
+  function hideLoginPage() {
+    loginGateEl.hidden = true;
+    logoutBtnEl.hidden = false;
+  }
+  function migrateLocalToUser() {
+    if (!curUserId) return;
+    var marker = 'dcck_user_' + curUserId;
+    if (localStorage.getItem(marker)) return;
+    var re = /^dcck2:\d{4}-\d{2}$/;
+    var pend = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && re.test(k)) pend.push(k);
+    }
+    for (var j = 0; j < pend.length; j++) {
+      var kk = pend[j];
+      try {
+        localStorage.setItem('dcck2:' + curUserId + ':' + kk.slice(6), localStorage.getItem(kk));
+        localStorage.removeItem(kk);
+      } catch (e) {}
+    }
+    try { localStorage.setItem(marker, '1'); } catch (e) {}
+  }
+  function adoptLegacyCloud(cb) {
+    if (!curUserId) { if (cb) cb(); return; }
+    var marker = '__dcc_adopt_' + curUserId;
+    if (localStorage.getItem(marker)) { if (cb) cb(); return; }
+    var q = new window.AV.Query('CheckinStore');
+    q.equalTo('key', 'main');
+    q.first().then(function (obj) {
+      if (obj && obj.get('data')) {
+        try {
+          var p = JSON.parse(obj.get('data') || 'null');
+          if (p && p.months) mergePayload(p);
+        } catch (e) {}
+        try { obj.destroy(); } catch (e) {
+          try { obj.set('data', JSON.stringify({ months: {} })); obj.save(); } catch (e2) {}
+        }
+      }
+      try { localStorage.setItem(marker, '1'); } catch (e) {}
+      if (cb) cb();
+    }, function () {
+      try { localStorage.setItem(marker, '1'); } catch (e) {}
+      if (cb) cb();
+    });
+  }
+  function loginSession() {
+    setSyncStatus('', '云同步中…');
+    migrateLocalToUser();
+    adoptLegacyCloud(function () {
+      cloudPull(function () {
+        cloudPush(bootUI);
+      });
+    });
+  }
+  function afterAuth() {
+    var u = window.AV.User.current();
+    if (!u) { setLoginMsg('fail', '登录失败，请重试'); return; }
+    setUser(u.id);
+    logoutBtnEl.textContent = '退出 · ' + (u.get('username') || u.id);
+    hideLoginPage();
+    loginSession();
+  }
+  function doAuth(isRegister) {
+    var name = loginUserEl.value.trim();
+    var pass = loginPassEl.value;
+    if (!name || !pass) { setLoginMsg('fail', '请输入用户名和密码'); return; }
+    setLoginMsg('', '请稍候…');
+    var p = isRegister
+      ? window.AV.User.signUp(name, pass)
+      : window.AV.User.logIn(name, pass);
+    p.then(function () { afterAuth(); }, function (err) {
+      var msg = (err && (err.message || err.error)) || (isRegister ? '注册失败，请重试' : '用户名或密码错误');
+      setLoginMsg('fail', msg);
+    });
+  }
 
   function loadSyncCfg() {
     try {
@@ -377,7 +523,7 @@
     return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
   function collectPayload() {
-    var prefix = 'dcck2:';
+    var prefix = localPrefix();
     var months = {};
     for (var i = 0; i < localStorage.length; i++) {
       var k = localStorage.key(i);
@@ -391,13 +537,14 @@
     if (!p || !p.months) return;
     for (var k in p.months) {
       if (Object.prototype.hasOwnProperty.call(p.months, k)) {
-        try { localStorage.setItem('dcck2:' + k, JSON.stringify(p.months[k])); } catch (e) {}
+        try { localStorage.setItem(localPrefix() + k, JSON.stringify(p.months[k])); } catch (e) {}
       }
     }
   }
   function cloudPull(cb) {
+    if (!curUserId) { if (cb) cb(); return; }
     var q = new window.AV.Query('CheckinStore');
-    q.equalTo('key', 'main');
+    q.equalTo('key', cloudUserKey());
     q.first().then(function (obj) {
       if (obj) {
         cloudObjId = obj.id;
@@ -410,7 +557,7 @@
     }, function () { if (cb) cb(); });
   }
   function cloudPush(cb) {
-    if (!syncCfg.appId || !avReady()) { if (cb) cb(); return; }
+    if (!syncCfg.appId || !curUserId || !avReady()) { if (cb) cb(); return; }
     var payload = collectPayload();
     var Store = window.AV.Object.extend('CheckinStore');
     var obj;
@@ -418,7 +565,15 @@
       obj = window.AV.Object.createWithoutData('CheckinStore', cloudObjId);
     } else {
       obj = new Store();
-      obj.set('key', 'main');
+      obj.set('key', cloudUserKey());
+      var u2 = window.AV.User.current();
+      if (u2) {
+        obj.set('user', u2);
+        var acl = new window.AV.ACL();
+        acl.setReadAccess(u2, true);
+        acl.setWriteAccess(u2, true);
+        obj.setACL(acl);
+      }
     }
     obj.set('data', JSON.stringify(payload));
     obj.save().then(function (saved) {
@@ -437,7 +592,7 @@
   }
 
   function emptyData() { return { days: {}, goals: ['', '', ''] }; }
-  function keyOf(y, m) { return 'dcck2:' + y + '-' + String(m).padStart(2, '0'); }
+  function keyOf(y, m) { return localPrefix() + y + '-' + String(m).padStart(2, '0'); }
 
   function load(y, m) {
     try {
@@ -734,26 +889,44 @@
     setSyncMsg('fail', '已停用同步，之后数据仅保存在本机浏览器');
   });
 
-  /* ---- startup: pull cloud first if configured ---- */
+  /* ---- auth startup ---- */
   function bootUI() {
     var now = todayRef();
     goto(now.y, now.m);
   }
+
+  loginFormEl.addEventListener('submit', function (e) {
+    e.preventDefault();
+    doAuth(false);
+  });
+  loginRegEl.addEventListener('click', function () {
+    doAuth(true);
+  });
+  logoutBtnEl.addEventListener('click', function () {
+    window.AV.User.logOut();
+    setUser(null);
+    cloudObjId = null;
+    setSyncStatus('', '未登录');
+    showLoginPage();
+    setLoginMsg('', '已退出登录');
+  });
+
   if (syncCfg.appId) {
-    if (!avReady()) {
-      setSyncStatus('fail', '云SDK加载失败');
-      bootUI();
-    } else {
-      setSyncStatus('', '云同步中…');
-      try {
-        avInit();
-        cloudPull(function () {
-          cloudPush(bootUI);
-        });
-      } catch (e) {
-        setSyncStatus('fail', '配置错误');
-        bootUI();
+    setSyncStatus('', '云同步中…');
+    try {
+      avInit();
+      var curUser = window.AV.User.current();
+      if (curUser && curUser.id) {
+        setUser(curUser.id);
+        logoutBtnEl.textContent = '退出 · ' + (curUser.get('username') || curUser.id);
+        hideLoginPage();
+        loginSession();
+      } else {
+        showLoginPage();
       }
+    } catch (e) {
+      showLoginPage();
+      setLoginMsg('fail', '初始化失败：' + e.message);
     }
   } else {
     bootUI();
