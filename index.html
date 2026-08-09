@@ -95,6 +95,8 @@
   .pi { display: flex; align-items: center; gap: 5px; font-size: 11px; line-height: 1.35; }
   .pi input { width: 11px; height: 11px; margin: 0; flex-shrink: 0; accent-color: var(--green); }
   .pt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pre-more { display: none; }
+  .pi-more { font-size: 10px; color: var(--muted); margin-top: 1px; white-space: nowrap; }
 
   .print-title { display: none; }
 
@@ -245,6 +247,8 @@
     .ptasks { display: block; margin-top: 2px; }
     .pi { font-size: 9px; line-height: 1.45; }
     .pi input { width: 8px; height: 8px; }
+    .pre-more { display: block; }
+    .pi-more { display: none; }
 
     .goals { box-shadow: none; border-radius: 0; padding: 10px 0 0; }
     .goal-input { font-size: 12px; padding: 3px 8px; border: 1px solid #999; }
@@ -690,12 +694,31 @@
       badge = '<span class="badge">' + doneCt + '/' + d.list.length + '</span>';
     }
 
+    var MAX_PRE = 3;
+    var items = (d && d.list) ? d.list : [];
     var ptasks = '';
-    if (d && d.list) {
-      for (var i = 0; i < d.list.length; i++) {
-        var it = d.list[i];
-        ptasks += '<label class="pi"><input type="checkbox" disabled' + (it.done ? ' checked' : '') +
+    if (!items.length) {
+      ptasks = '<div class="pre-visible"><div class="pi-more">＋ 添加任务</div></div>';
+    } else {
+      var shown = items.slice(0, MAX_PRE);
+      var pre = '<div class="pre-visible">';
+      for (var i = 0; i < shown.length; i++) {
+        var it = shown[i];
+        pre += '<label class="pi"><input type="checkbox" disabled' + (it.done ? ' checked' : '') +
           '><span class="pt">' + escapeHtml(it.t) + '</span></label>';
+      }
+      if (items.length > shown.length) pre += '<div class="pi-more">＋' + (items.length - shown.length) + ' 条未显示</div>';
+      pre += '</div>';
+      ptasks += pre;
+      if (items.length > shown.length) {
+        var more = '<div class="pre-more">';
+        for (var j = shown.length; j < items.length; j++) {
+          var it2 = items[j];
+          more += '<label class="pi"><input type="checkbox" disabled' + (it2.done ? ' checked' : '') +
+            '><span class="pt">' + escapeHtml(it2.t) + '</span></label>';
+        }
+        more += '</div>';
+        ptasks += more;
       }
     }
 
